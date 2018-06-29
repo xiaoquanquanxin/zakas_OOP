@@ -1,0 +1,417 @@
+写jquery有感
+我最开始用面向对象的方法写了一些创建dom元素的通用方法,并且通过链式调用基本达到了模拟jquery的目的
+但我写的构造函数在被调用的时候需要被new一次,不像jquery方便,于是我把它分装在了一个方法中
+这个方法名为CreateElement,它返回我每次new出来的实例,并且将这个方法暴露给window对象.这个方法就是jQuery的雏形.为了区分,我打算叫它QueryQ
+此处开天眼:
+我将这个方法赋值给QueryQ的原型的init属性,这样他就几乎和jquery一模一样了.
+但仅目前为止.我仅知道的是:
+1.QueryQ根本不是一个构造函数,他只是一个真正用来实例化的入口.
+2.QueryQ必须和CreateElement有关联,因为我如果将来想要拓展它的话.
+结果就是:
+1.这时QueryQ的constructor只是原生的Function,原型指向也不是CreateElement的原型.而我每次new方程是要对CreateElement,这个构造函数进行操作.
+2.这本来没什么问题,但如果我想拓展这个QueryQ的话,比如写一写插件,那我几乎无计可施,因为我的dom对象是基于CreateElement的,而我无法从全局修改这个局部变量.
+所以我需要把QueryQ和CreateEmenent的原型相互绑定.QueryQ.prototype = CreateElement.prototype;
+这样我就可以在全局去修改QueryQ的方法了.
+正因为如此,我可以注册QueryQ对象的原型而不会是CreateElement的原型.
+所以有:
+QueryQ.prototype ={}
+CreateElement.prototype = QueryQ.prototype;
+这样在我程序中的function CreateElement就显得十分突兀.如果我把它当做QueryQ的一部分就会很精干.而我已经注册了QueryQ的prototype,那么我可以把它作为这个对象的一个属性.
+CreateElement === QueryQ.prototype.init.
+此时就可以无视CreateElement了.
+记得把CreateElement.prototype = QueryQ.prototype修改成
+QueryQ.prototype.init.prototype = QueryQ.prototype.
+完成jq
+
+
+
+
+//1.0
+(function (win) {
+    win.QueryQ = function (options) {
+        function CreateElement(options) {
+            this.el = document.createElement(options.tagName);
+            this.el.innerHTML = options.text || null;
+            this.el.className = options.className || options.tagName + "-normal";
+            this.init(options);
+        }
+
+        CreateElement.prototype = {
+            constructor: CreateElement,
+            init: function () {
+                var isRoles = this.setRole(options.role);
+                if (isRoles) {
+                    var eventList = Object.keys(options.event || {});
+                    var _this = this;
+                    eventList.forEach(function (key, i) {
+                        //  注册事件
+                        _this.el.addEventListener(key, options.event[key], false);
+                    });
+                } else {
+                    this.el.disabled = true;
+                    this.el.classList.add("disabled");
+                }
+            },
+            setRole: function (role) {
+                return (role === undefined) || roles[role];
+            },
+            addClass: function (addClassName) {
+                this.el.classList.add(addClassName);
+                return this;
+            },
+            removeClass: function (removeClassName) {
+                this.el.classList.remove(removeClassName);
+                return this;
+            },
+            append: function (dom) {
+                this.el.appendChild(dom);
+                return this;
+            },
+            appendTo: function (parentDom) {
+                parentDom.appendChild(this.el);
+                return this;
+            },
+            css: function (cssObject) {
+                if (cssObject !== undefined && cssObject.constructor === Object) {
+                    for (var key in cssObject) {
+                        this.el.style[key] = cssObject[key];
+                    }
+                }
+                return this;
+            },
+            on: function (eventType, fn) {
+                if (eventType === undefined === fn) {
+
+                } else {
+                    this.el.addEventListener(eventType, fn, false);
+                }
+                return this;
+            },
+            off: function (eventType, fn) {
+                if (eventType === undefined === fn) {
+
+                } else {
+                    this.el.removeEventListener(eventType, fn, false);
+                }
+                return this;
+            },
+            html: function (htmls) {
+                if (htmls === undefined) {
+                    return this.el.innerHTML;
+                } else {
+                    this.el.innerHTML = htmls;
+                    return this.el;
+                }
+            },
+            text: function (texts) {
+                if (texts === undefined) {
+                    return this.el.innerText;
+                } else {
+                    this.el.innerText = texts;
+                    return this.el;
+                }
+            },
+            attr: function (attrs, data) {
+                if (data === undefined) {
+                    return this.el.getAttribute(attrs);
+                } else {
+                    this.el.setAttribute(attrs, data);
+                    return this;
+                }
+            }
+        };
+        return new CreateElement(options);
+    }
+}(window));
+//1.1
+(function (win) {
+    win.QueryQ = function (options) {
+        return new CreateElement(options);
+    };
+    function CreateElement(options) {
+        this.init(options);
+    }
+
+    CreateElement.prototype = {
+        constructor: CreateElement,
+        init: function (options) {
+            this.el = document.createElement(options.tagName);
+            this.el.innerHTML = options.text || null;
+            this.el.className = options.className || options.tagName + "-normal";
+            var isRoles = this.setRole(options.role);
+            if (isRoles) {
+                var eventList = Object.keys(options.event || {});
+                var _this = this;
+                eventList.forEach(function (key, i) {
+                    //  注册事件
+                    _this.el.addEventListener(key, options.event[key], false);
+                });
+            } else {
+                this.el.disabled = true;
+                this.el.classList.add("disabled");
+            }
+        },
+        setRole: function (role) {
+            return (role === undefined) || roles[role];
+        },
+        addClass: function (addClassName) {
+            this.el.classList.add(addClassName);
+            return this;
+        },
+        removeClass: function (removeClassName) {
+            this.el.classList.remove(removeClassName);
+            return this;
+        },
+        append: function (dom) {
+            this.el.appendChild(dom);
+            return this;
+        },
+        appendTo: function (parentDom) {
+            parentDom.appendChild(this.el);
+            return this;
+        },
+        css: function (cssObject) {
+            if (cssObject !== undefined && cssObject.constructor === Object) {
+                for (var key in cssObject) {
+                    this.el.style[key] = cssObject[key];
+                }
+            }
+            return this;
+        },
+        on: function (eventType, fn) {
+            if (eventType === undefined === fn) {
+
+            } else {
+                this.el.addEventListener(eventType, fn, false);
+            }
+            return this;
+        },
+        off: function (eventType, fn) {
+            if (eventType === undefined === fn) {
+
+            } else {
+                this.el.removeEventListener(eventType, fn, false);
+            }
+            return this;
+        },
+        html: function (htmls) {
+            if (htmls === undefined) {
+                return this.el.innerHTML;
+            } else {
+                this.el.innerHTML = htmls;
+                return this.el;
+            }
+        },
+        text: function (texts) {
+            if (texts === undefined) {
+                return this.el.innerText;
+            } else {
+                this.el.innerText = texts;
+                return this.el;
+            }
+        },
+        attr: function (attrs, data) {
+            if (data === undefined) {
+                return this.el.getAttribute(attrs);
+            } else {
+                this.el.setAttribute(attrs, data);
+                return this;
+            }
+        }
+    };
+}(window));
+//  这时QueryQ的原型只是一个普通方程.而我每次new方程是要对CreateElement这个构造函数进行操作,这本来没什么问题,但如果我想拓展这个QueryQ的话,我几乎无计可施,因为我无法修改CreateElement的原型
+
+
+(function (win) {
+    var QueryQ = function (options) {
+        return new QueryQ.fn.init(options);
+    };
+    QueryQ.prototype = {
+        constructor: QueryQ,
+        init: function (options) {
+            this.el = document.createElement(options.tagName);
+            this.el.innerHTML = options.text || null;
+            this.el.className = options.className || options.tagName + "-normal";
+            var isRoles = this.setRole(options.role);
+            if (isRoles) {
+                var eventList = Object.keys(options.event || {});
+                var _this = this;
+                eventList.forEach(function (key, i) {
+                    //  注册事件
+                    _this.el.addEventListener(key, options.event[key], false);
+                });
+            } else {
+                this.el.disabled = true;
+                this.el.classList.add("disabled");
+            }
+        },
+        setRole: function (role) {
+            return (role === undefined) || roles[role];
+        },
+        addClass: function (addClassName) {
+            this.el.classList.add(addClassName);
+            return this;
+        },
+        removeClass: function (removeClassName) {
+            this.el.classList.remove(removeClassName);
+            return this;
+        },
+        append: function (dom) {
+            this.el.appendChild(dom);
+            return this;
+        },
+        appendTo: function (parentDom) {
+            parentDom.appendChild(this.el);
+            return this;
+        },
+        css: function (cssObject) {
+            if (cssObject !== undefined && cssObject.constructor === Object) {
+                for (var key in cssObject) {
+                    this.el.style[key] = cssObject[key];
+                }
+            }
+            return this;
+        },
+        on: function (eventType, fn) {
+            if (eventType === undefined === fn) {
+
+            } else {
+                this.el.addEventListener(eventType, fn, false);
+            }
+            return this;
+        },
+        off: function (eventType, fn) {
+            if (eventType === undefined === fn) {
+
+            } else {
+                this.el.removeEventListener(eventType, fn, false);
+            }
+            return this;
+        },
+        html: function (htmls) {
+            if (htmls === undefined) {
+                return this.el.innerHTML;
+            } else {
+                this.el.innerHTML = htmls;
+                return this.el;
+            }
+        },
+        text: function (texts) {
+            if (texts === undefined) {
+                return this.el.innerText;
+            } else {
+                this.el.innerText = texts;
+                return this.el;
+            }
+        },
+        attr: function (attrs, data) {
+            if (data === undefined) {
+                return this.el.getAttribute(attrs);
+            } else {
+                this.el.setAttribute(attrs, data);
+                return this;
+            }
+        }
+    };
+    QueryQ.fn = QueryQ.prototype;
+    QueryQ.fn.init.prototype = QueryQ.fn;
+    win.QueryQ = QueryQ;
+}(window));
+
+
+
+
+(function (win) {
+    win.QueryQ = function (options) {
+        return new QueryQ.prototype.init(options);
+    };
+    QueryQ.prototype = {
+        constructor: QueryQ,
+        init: function (options) {
+            this.el = document.createElement(options.tagName);
+            this.el.innerHTML = options.text || null;
+            this.el.className = options.className || options.tagName + "-normal";
+            var isRoles = this.setRole(options.role);
+            if (isRoles) {
+                var eventList = Object.keys(options.event || {});
+                var _this = this;
+                eventList.forEach(function (key, i) {
+                    //  注册事件
+                    _this.el.addEventListener(key, options.event[key], false);
+                });
+            } else {
+                this.el.disabled = true;
+                this.el.classList.add("disabled");
+            }
+        },
+        setRole: function (role) {
+            return (role === undefined) || roles[role];
+        },
+        addClass: function (addClassName) {
+            this.el.classList.add(addClassName);
+            return this;
+        },
+        removeClass: function (removeClassName) {
+            this.el.classList.remove(removeClassName);
+            return this;
+        },
+        append: function (dom) {
+            this.el.appendChild(dom);
+            return this;
+        },
+        appendTo: function (parentDom) {
+            parentDom.appendChild(this.el);
+            return this;
+        },
+        css: function (cssObject) {
+            if (cssObject !== undefined && cssObject.constructor === Object) {
+                for (var key in cssObject) {
+                    this.el.style[key] = cssObject[key];
+                }
+            }
+            return this;
+        },
+        on: function (eventType, fn) {
+            if (eventType === undefined === fn) {
+
+            } else {
+                this.el.addEventListener(eventType, fn, false);
+            }
+            return this;
+        },
+        off: function (eventType, fn) {
+            if (eventType === undefined === fn) {
+
+            } else {
+                this.el.removeEventListener(eventType, fn, false);
+            }
+            return this;
+        },
+        html: function (htmls) {
+            if (htmls === undefined) {
+                return this.el.innerHTML;
+            } else {
+                this.el.innerHTML = htmls;
+                return this.el;
+            }
+        },
+        text: function (texts) {
+            if (texts === undefined) {
+                return this.el.innerText;
+            } else {
+                this.el.innerText = texts;
+                return this.el;
+            }
+        },
+        attr: function (attrs, data) {
+            if (data === undefined) {
+                return this.el.getAttribute(attrs);
+            } else {
+                this.el.setAttribute(attrs, data);
+                return this;
+            }
+        }
+    };
+    QueryQ.prototype.init.prototype = QueryQ.prototype;
+}(window));
