@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>跨window测试</title>
+</head>
+<body>
+<script>
+    var __top_a = top.a;
+    var __top_obj = top.obj;
+    console.log(__top_obj);
+    //  获得原型,没问题
+    console.log(Object.getPrototypeOf(__top_obj));
+    //  获得构造函数,没问题
+    console.log(__top_obj.constructor);
+    //  不是一个window的Object,所以是false
+    console.log(Object.prototype === __top_obj.__proto__);
+    window.onload = function () {
+        console.log("window");
+    }
+</script>
+</body>
+</html>
