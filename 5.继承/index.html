@@ -7,13 +7,17 @@
 <body>
 <iframe src="window.html" frameborder="0"></iframe>
 <script>
-    var a  = 1;
-    var obj = {index:12};
+    window.a = 1;
+    var obj = {index: 12};
     window.onload = function () {
         console.log("index");
     }
+
+    console.log(Object.getOwnPropertyDescriptor(obj,"name"))
 </script>
 <script src="5.1原型对象链和Object.prototype.js"></script>
 <script src="5.2对象继承.js"></script>
+<script src="5.3构造函数继承.js"></script>
+<script src="5.4构造函数窃取.js"></script>
 </body>
 </html>

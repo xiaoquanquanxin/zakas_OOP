@@ -21,6 +21,11 @@
     });
     console.log(d);
 
+//  可以创造出一个没有原型的对象
+    var obj = Object.create(null);
+    obj[0] = 0;
+    obj.length = 1;
+    console.log(obj);
 
     console.log("5.2对象继承");
 })();
